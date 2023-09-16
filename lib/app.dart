@@ -3,11 +3,13 @@ import 'multiple_tab.dart';
 import 'single_tab.dart';
 
 class App extends StatefulWidget {
+  const App({super.key});
+
   @override
-  _AppState createState() => _AppState();
+  AppState createState() => AppState();
 }
 
-class _AppState extends State<App> {
+class AppState extends State<App> {
   static const _tabCount = 2;
 
   @override
@@ -18,21 +20,12 @@ class _AppState extends State<App> {
         appBar: AppBar(
           centerTitle: true,
           title: const Text('Vlc Player Example'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Single'),
-              Tab(text: 'Multiple'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
+                  ),
+        body: 
             SingleTab(),
-            MultipleTab(),
-          ],
+         
         ),
-      ),
+   
     );
   }
 }

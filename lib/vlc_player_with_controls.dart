@@ -247,11 +247,15 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
                         ),
                       ],
                     ),
-                    IconButton(
-                      tooltip: 'Instantánea',
-                      icon: const Icon(Icons.camera),
-                      color: Colors.white,
-                      onPressed: _createCameraImage,
+                    Builder(
+                      builder: (context) {
+                        return IconButton(
+                          tooltip: 'Instantánea',
+                          icon: const Icon(Icons.camera),
+                          color: Colors.white,
+                          onPressed: _createCameraImage,
+                        );
+                      }
                     ),
                     IconButton(
                       color: Colors.white,
@@ -470,7 +474,7 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
 
     if (subtitleTracks != null && subtitleTracks.isNotEmpty) {
       if (!mounted) return;
-      final int selectedSubId = await showDialog(
+      final int? selectedSubId = await showDialog<int?>(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
@@ -513,7 +517,7 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
 
     if (audioTracks != null && audioTracks.isNotEmpty) {
       if (!mounted) return;
-      final int selectedAudioTrackId = await showDialog(
+      final int? selectedAudioTrackId = await showDialog<int?>(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
@@ -556,7 +560,7 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
 
     if (castDevices != null && castDevices.isNotEmpty) {
       if (!mounted) return;
-      final String? selectedCastDeviceName = await showDialog(
+      final String? selectedCastDeviceName = await showDialog<String>(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
@@ -597,13 +601,18 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
     }
   }
 
-  Future<void> _createCameraImage() async {
-    final snapshot = await _controller.takeSnapshot();
+Future<void> _createCameraImage() async {
+  final snapshot = await _controller.takeSnapshot();
+  if (!mounted) return;
+
+  // Verifica que el overlay todavía esté disponible
+  if (Overlay.of(context) != null) {
     _overlayEntry.remove();
     _overlayEntry = _createSnapshotThumbnail(snapshot);
-    if (!mounted) return;
-    Overlay.of(context)!.insert(_overlayEntry);
+    Overlay.of(context).insert(_overlayEntry);
   }
+}
+
 
   OverlayEntry _createSnapshotThumbnail(Uint8List snapshot) {
     double right = initSnapshotRightPosition;
