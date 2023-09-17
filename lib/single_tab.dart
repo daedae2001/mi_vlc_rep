@@ -1,10 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:path_provider/path_provider.dart';
-
+import 'services/m3u_service.dart';
 import 'video_data.dart';
 import 'vlc_player_with_controls.dart';
 
@@ -35,97 +34,69 @@ class _SingleTabState extends State<SingleTab> {
     return temp;
   }
 
-  void fillVideos() {
-    listVideos = [
-      VideoData(
-        name: 'Network Video 1',
-        path:
-            'http://samples.mplayerhq.hu/MPEG-4/embedded_subs/1Video_2Audio_2SUBs_timed_text_streams_.mp4',
-        type: VideoType.network,
-      ),
-      //
-      VideoData(
-        name: 'Network Video 2',
-        path: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-        type: VideoType.network,
-      ),
-      //
-      VideoData(
-        name: 'HLS Streaming Video 1',
-        path: 'http://190.83.60.34:1414/play/a03q',
-        type: VideoType.network,
-      ),
-      //
-      VideoData(
-        name: 'File Video 1',
-        path: 'System File Example',
-        type: VideoType.file,
-      ),
-      //
-      VideoData(
-        name: 'Asset Video 1',
-        path: 'assets/trailer.mp4',
-        type: VideoType.asset,
-      ),
-    ];
-  }
-
   @override
   void initState() {
     super.initState();
 
-    //
-    fillVideos();
+    // Inicialmente, no incluyas ninguna entrada fija en la lista de videos.
+    // Solo se cargarán videos de la lista M3U después de llamar a _loadM3uEntries().
+
     selectedVideoIndex = 0;
     //
-    final initVideo = listVideos[selectedVideoIndex];
-    switch (initVideo.type) {
-      case VideoType.network:
-        _controller = VlcPlayerController.network(
-          initVideo.path,
-          hwAcc: HwAcc.full,
-          options: VlcPlayerOptions(
-            advanced: VlcAdvancedOptions([
-              VlcAdvancedOptions.networkCaching(_networkCachingMs),
-            ]),
-            subtitle: VlcSubtitleOptions([
-              VlcSubtitleOptions.boldStyle(true),
-              VlcSubtitleOptions.fontSize(_subtitlesFontSize),
-              VlcSubtitleOptions.outlineColor(VlcSubtitleColor.yellow),
-              VlcSubtitleOptions.outlineThickness(VlcSubtitleThickness.normal),
-              // works only on externally added subtitles
-              VlcSubtitleOptions.color(VlcSubtitleColor.navy),
-            ]),
-            http: VlcHttpOptions([
-              VlcHttpOptions.httpReconnect(true),
-            ]),
-            rtp: VlcRtpOptions([
-              VlcRtpOptions.rtpOverRtsp(true),
-            ]),
-          ),
-        );
-        break;
-      case VideoType.file:
-        final file = File(initVideo.path);
-        _controller = VlcPlayerController.file(
-          file,
-        );
-        break;
-      case VideoType.asset:
-        _controller = VlcPlayerController.asset(
-          initVideo.path,
-          options: VlcPlayerOptions(),
-        );
-        break;
-      case VideoType.recorded:
-        break;
-    }
+    _controller = VlcPlayerController.network(
+      '', // Inicialmente, no se carga ningún video.
+      hwAcc: HwAcc.full,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          VlcAdvancedOptions.networkCaching(_networkCachingMs),
+        ]),
+        subtitle: VlcSubtitleOptions([
+          VlcSubtitleOptions.boldStyle(true),
+          VlcSubtitleOptions.fontSize(_subtitlesFontSize),
+          VlcSubtitleOptions.outlineColor(VlcSubtitleColor.yellow),
+          VlcSubtitleOptions.outlineThickness(VlcSubtitleThickness.normal),
+          VlcSubtitleOptions.color(VlcSubtitleColor.navy),
+        ]),
+        http: VlcHttpOptions([
+          VlcHttpOptions.httpReconnect(true),
+        ]),
+        rtp: VlcRtpOptions([
+          VlcRtpOptions.rtpOverRtsp(true),
+        ]),
+      ),
+    );
+
     _controller.addOnInitListener(() async {
       await _controller.startRendererScanning();
     });
     _controller.addOnRendererEventListener((type, id, name) {
       print('OnRendererEventListener $type $id $name');
     });
+    _loadM3uEntries();
+  }
+
+  Future<void> _loadM3uEntries() async {
+    try {
+      final m3uService = M3uService();
+      final m3uEntries =
+          await m3uService.parseM3u('https://daedae.fun/all.m3u');
+
+      // Convertir las entradas de M3uEntry a VideoData y agregarlas a la lista
+      final newVideos = m3uEntries.map((entry) {
+        return VideoData(
+          name: entry.nombre,
+          url: entry.streamUrl, // Cambia 'path' a 'url'
+          type: VideoType.network, // Puedes ajustar el tipo según tus necesidades
+          logoUrl: entry.tvgLogo, // Usa la URL del logo del canal de la entrada M3U
+        );
+      }).toList();
+
+      setState(() {
+        listVideos.addAll(newVideos);
+      });
+    } catch (e) {
+      print('Error cargando entradas M3U: $e');
+    }
   }
 
   @override
@@ -142,15 +113,16 @@ class _SingleTabState extends State<SingleTab> {
                 listVideos.add(
                   VideoData(
                     name: 'Recorded Video',
-                    path: recordPath,
+                    url: recordPath, // Cambia 'path' a 'url'
                     type: VideoType.recorded,
+                    logoUrl: '', // O proporciona una URL de logo si tienes una
                   ),
                 );
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'The recorded video file has been added to the end of list.',
+                    'The recorded video file has been added to the end of the list.',
                   ),
                 ),
               );
@@ -183,21 +155,13 @@ class _SingleTabState extends State<SingleTab> {
               dense: true,
               selected: selectedVideoIndex == index,
               selectedTileColor: Colors.black54,
-              leading: Icon(
-                iconData,
-                color:
-                    selectedVideoIndex == index ? Colors.white : Colors.black,
+              leading: Image.network(
+                video.logoUrl ?? '', // Utiliza la URL del logo del canal
+                width: 40, // Ajusta el tamaño del logo según tus necesidades
+                height: 40,
               ),
               title: Text(
                 video.name,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color:
-                      selectedVideoIndex == index ? Colors.white : Colors.black,
-                ),
-              ),
-              subtitle: Text(
-                video.path,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color:
@@ -209,7 +173,7 @@ class _SingleTabState extends State<SingleTab> {
                 switch (video.type) {
                   case VideoType.network:
                     await _controller.setMediaFromNetwork(
-                      video.path,
+                      video.url, // Cambia 'path' a 'url'
                       hwAcc: HwAcc.full,
                     );
                     break;
@@ -242,10 +206,10 @@ class _SingleTabState extends State<SingleTab> {
                     }
                     break;
                   case VideoType.asset:
-                    await _controller.setMediaFromAsset(video.path);
+                    await _controller.setMediaFromAsset(video.url); // Cambia 'path' a 'url'
                     break;
                   case VideoType.recorded:
-                    final recordedFile = File(video.path);
+                    final recordedFile = File(video.url); // Cambia 'path' a 'url'
                     await _controller.setMediaFromFile(recordedFile);
                     break;
                 }

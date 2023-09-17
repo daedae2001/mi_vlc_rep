@@ -1,12 +1,14 @@
 class VideoData {
   final String name;
-  final String path;
+  final String url;
   final VideoType type;
+  final String logoUrl;
 
   VideoData({
     required this.name,
-    required this.path,
+    required this.url,
     required this.type,
+    required this.logoUrl,
   });
 }
 

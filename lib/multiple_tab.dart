@@ -63,8 +63,9 @@ class _MultipleTabState extends State<MultipleTab> {
                 listVideos.add(
                   VideoData(
                     name: 'Recorded Video',
-                    path: recordPath,
+                    url: recordPath,
                     type: VideoType.recorded,
+                    logoUrl: ''
                   ),
                 );
               });

@@ -13,6 +13,7 @@ class VlcPlayerWithControls extends StatefulWidget {
   final bool showControls;
   final OnStopRecordingCallback onStopRecording;
 
+
   const VlcPlayerWithControls({
     Key? key,
     required this.controller,
@@ -34,6 +35,7 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
   static const _overlayWidth = 100.0;
   static const _elevation = 4.0;
   static const _aspectRatio = 16 / 9;
+bool isFullScreen = false;
 
   final double initSnapshotRightPosition = 10;
   final double initSnapshotBottomPosition = 10;
@@ -386,10 +388,46 @@ class VlcPlayerWithControlsState extends State<VlcPlayerWithControls>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.fullscreen),
-                  color: Colors.white,
-                  onPressed: () {},
+  icon: isFullScreen
+      ? const Icon(Icons.fullscreen_exit)
+      : const Icon(Icons.fullscreen),
+  color: Colors.white,
+  onPressed: () {
+    if (!isFullScreen) {
+      // Mostrar pantalla completa
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) {
+            return Scaffold(
+              body: Center(
+                child: VlcPlayerWithControls(
+                  controller: _controller,
+                  showControls: true, // Mostrar controles en pantalla completa
+                  onStopRecording: widget.onStopRecording,
                 ),
+              ),
+            );
+          },
+        ),
+      ).then((_) {
+        // Cuando se regrese de la pantalla completa, marca la variable como false.
+        setState(() {
+          isFullScreen = false;
+        });
+      });
+    } else {
+      // Salir de pantalla completa
+      Navigator.pop(context);
+    }
+
+    // Cambiar el estado de la variable isFullScreen.
+    setState(() {
+      isFullScreen = !isFullScreen;
+    });
+  },
+),
+
               ],
             ),
           ),
