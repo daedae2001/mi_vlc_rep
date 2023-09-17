@@ -82,27 +82,25 @@ bool isFullScreen = false;
     if (_controller.value.isInitialized) {
       final oPosition = _controller.value.position;
       final oDuration = _controller.value.duration;
-      if (oPosition != null && oDuration != null) {
-        if (oDuration.inHours == 0) {
-          final strPosition = oPosition.toString().split('.').first;
-          final strDuration = oDuration.toString().split('.').first;
-          setState(() {
-            position =
-                "${strPosition.split(':')[1]}:${strPosition.split(':')[2]}";
-            duration =
-                "${strDuration.split(':')[1]}:${strDuration.split(':')[2]}";
-          });
-        } else {
-          setState(() {
-            position = oPosition.toString().split('.').first;
-            duration = oDuration.toString().split('.').first;
-          });
-        }
+      if (oDuration.inHours == 0) {
+        final strPosition = oPosition.toString().split('.').first;
+        final strDuration = oDuration.toString().split('.').first;
         setState(() {
-          validPosition = oDuration.compareTo(oPosition) >= 0;
-          sliderValue = validPosition ? oPosition.inSeconds.toDouble() : 0;
+          position =
+              "${strPosition.split(':')[1]}:${strPosition.split(':')[2]}";
+          duration =
+              "${strDuration.split(':')[1]}:${strDuration.split(':')[2]}";
+        });
+      } else {
+        setState(() {
+          position = oPosition.toString().split('.').first;
+          duration = oDuration.toString().split('.').first;
         });
       }
+      setState(() {
+        validPosition = oDuration.compareTo(oPosition) >= 0;
+        sliderValue = validPosition ? oPosition.inSeconds.toDouble() : 0;
+      });
 
       setState(() {
         numberOfCaptions = _controller.value.spuTracksCount;

@@ -13,9 +13,9 @@ class SingleTab extends StatefulWidget {
 }
 
 class _SingleTabState extends State<SingleTab> {
-  static const _networkCachingMs = 2000;
+  static const _networkCachingMs = 6000;
   static const _subtitlesFontSize = 30;
-  static const _height = 400.0;
+  static const _height = 560.0;
 
   final _key = GlobalKey<VlcPlayerWithControlsState>();
 
@@ -98,12 +98,12 @@ class _SingleTabState extends State<SingleTab> {
       print('Error cargando entradas M3U: $e');
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        SizedBox(
+@override
+Widget build(BuildContext context) {
+  return Column(
+    children: [
+      Expanded(
+        child: SizedBox(
           height: _height,
           child: VlcPlayerWithControls(
             key: _key,
@@ -122,17 +122,18 @@ class _SingleTabState extends State<SingleTab> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text(
-                    'The recorded video file has been added to the end of the list.',
+                    'El archivo de vídeo grabado se ha añadido al final de la lista.',
                   ),
                 ),
               );
             },
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
+      ),
+      Container(
+        height: MediaQuery.of(context).size.height - _height,
+        child: ListView.builder(
           itemCount: listVideos.length,
-          physics: const NeverScrollableScrollPhysics(),
           itemBuilder: (BuildContext context, int index) {
             final video = listVideos[index];
             IconData iconData;
@@ -165,7 +166,7 @@ class _SingleTabState extends State<SingleTab> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color:
-                      selectedVideoIndex == index ? Colors.white : Colors.black,
+                  selectedVideoIndex == index ? Colors.white : Colors.black,
                 ),
               ),
               onTap: () async {
@@ -220,9 +221,10 @@ class _SingleTabState extends State<SingleTab> {
             );
           },
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   @override
   Future<void> dispose() async {
