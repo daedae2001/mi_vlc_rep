@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:vls_my_1/models/m3u_linea_model.dart';
 import 'package:vls_my_1/services/m3u_service.dart';
 

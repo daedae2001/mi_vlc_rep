@@ -23,6 +23,7 @@ class _SingleTabState extends State<SingleTab> {
   //
   List<VideoData> listVideos = [];
   int selectedVideoIndex = 0;
+  bool isPullToRefreshActive = false; // Estado del gesto de deslizar hacia abajo
 
   Future<File> _loadVideoToFs() async {
     final videoData = await rootBundle.load('assets/trailer.mp4');
@@ -92,139 +93,177 @@ class _SingleTabState extends State<SingleTab> {
       }).toList();
 
       setState(() {
-        listVideos.addAll(newVideos);
+        if (!isPullToRefreshActive) {
+          // Solo agregar videos a la lista si el gesto de deslizar hacia abajo no está activo
+          listVideos.clear(); // Borrar la lista existente antes de agregar nuevos videos
+          listVideos.addAll(newVideos);
+        }
+        isPullToRefreshActive = false; // Restablecer el estado del gesto de deslizar hacia abajo
       });
     } catch (e) {
       print('Error cargando entradas M3U: $e');
     }
   }
-@override
-Widget build(BuildContext context) {
-  return Column(
-    children: [
-      Expanded(
-        child: SizedBox(
-          height: _height,
-          child: VlcPlayerWithControls(
-            key: _key,
-            controller: _controller,
-            onStopRecording: (recordPath) {
-              setState(() {
-                listVideos.add(
-                  VideoData(
-                    name: 'Recorded Video',
-                    url: recordPath, // Cambia 'path' a 'url'
-                    type: VideoType.recorded,
-                    logoUrl: '', // O proporciona una URL de logo si tienes una
-                  ),
-                );
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'El archivo de vídeo grabado se ha añadido al final de la lista.',
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      Container(
-        height: MediaQuery.of(context).size.height - _height,
-        child: ListView.builder(
-          itemCount: listVideos.length,
-          itemBuilder: (BuildContext context, int index) {
-            final video = listVideos[index];
-            IconData iconData;
-            switch (video.type) {
-              case VideoType.network:
-                iconData = Icons.cloud;
-                break;
-              case VideoType.file:
-                iconData = Icons.insert_drive_file;
-                break;
-              case VideoType.asset:
-                iconData = Icons.all_inbox;
-                break;
-              case VideoType.recorded:
-                iconData = Icons.videocam;
-                break;
-            }
 
-            return ListTile(
-              dense: true,
-              selected: selectedVideoIndex == index,
-              selectedTileColor: Colors.black54,
-              leading: Image.network(
-                video.logoUrl ?? '', // Utiliza la URL del logo del canal
-                width: 40, // Ajusta el tamaño del logo según tus necesidades
-                height: 40,
+  Future<void> _handleRefresh() async {
+    // Establecer el estado del gesto de deslizar hacia abajo como activo
+    setState(() {
+      isPullToRefreshActive = true;
+    });
+    // Recargar la lista de videos
+    await _loadM3uEntries();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: Column(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: _height,
+              child: VlcPlayerWithControls(
+                key: _key,
+                controller: _controller,
+                onStopRecording: (recordPath) {
+                  setState(() {
+                    listVideos.add(
+                      VideoData(
+                        name: 'Recorded Video',
+                        url: recordPath, // Cambia 'path' a 'url'
+                        type: VideoType.recorded,
+                        logoUrl: '', // O proporciona una URL de logo si tienes una
+                      ),
+                    );
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'El archivo de vídeo grabado se ha añadido al final de la lista.',
+                      ),
+                    ),
+                  );
+                },
               ),
-              title: Text(
-                video.name,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color:
-                  selectedVideoIndex == index ? Colors.white : Colors.black,
-                ),
-              ),
-              onTap: () async {
-                await _controller.stopRecording();
+            ),
+          ),
+          Container(
+            height: MediaQuery.of(context).size.height - _height,
+            child: ListView.builder(
+              itemCount: listVideos.length,
+              itemBuilder: (BuildContext context, int index) {
+                final video = listVideos[index];
+                IconData iconData;
                 switch (video.type) {
                   case VideoType.network:
-                    await _controller.setMediaFromNetwork(
-                      video.url, // Cambia 'path' a 'url'
-                      hwAcc: HwAcc.full,
-                    );
+                    iconData = Icons.cloud;
                     break;
                   case VideoType.file:
-                    if (!mounted) break;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Copying file to temporary storage...'),
-                      ),
-                    );
-                    await Future<void>.delayed(const Duration(seconds: 1));
-                    final tempVideo = await _loadVideoToFs();
-                    await Future<void>.delayed(const Duration(seconds: 1));
-                    if (!mounted) break;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Now trying to play...'),
-                      ),
-                    );
-                    await Future<void>.delayed(const Duration(seconds: 1));
-                    if (await tempVideo.exists()) {
-                      await _controller.setMediaFromFile(tempVideo);
-                    } else {
-                      if (!mounted) break;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('File load error.'),
-                        ),
-                      );
-                    }
+                    iconData = Icons.insert_drive_file;
                     break;
                   case VideoType.asset:
-                    await _controller.setMediaFromAsset(video.url); // Cambia 'path' a 'url'
+                    iconData = Icons.all_inbox;
                     break;
                   case VideoType.recorded:
-                    final recordedFile = File(video.url); // Cambia 'path' a 'url'
-                    await _controller.setMediaFromFile(recordedFile);
+                    iconData = Icons.videocam;
                     break;
                 }
-                setState(() {
-                  selectedVideoIndex = index;
-                });
+
+                return ListTile(
+                  dense: true,
+                  selected: selectedVideoIndex == index,
+                  selectedTileColor: Colors.black54,
+                  leading: FutureBuilder(
+                    future: Future.delayed(Duration(seconds: 0), () => video.logoUrl),
+                    builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        // Muestra un indicador de carga mientras se espera la imagen
+                        return CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        // Si ocurre un error al cargar la imagen, muestra la imagen genérica
+                        return Image.asset(
+                          'assets/sinlogotipo.jpg', // Ruta de la imagen genérica
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        );
+                      } else {
+                        // Muestra la imagen cargada desde la URL
+                        return Image.network(
+                          snapshot.data!, // Utiliza la URL del logo del canal
+                          width: 40, // Ajusta el tamaño del logo según tus necesidades
+                          height: 40,
+                          fit: BoxFit.contain, // Ajusta el ajuste de la imagen según tus necesidades
+                        );
+                      }
+                    },
+                  ),
+                  title: Text(
+                    video.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color:
+                          selectedVideoIndex == index ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  onTap: () async {
+                    await _controller.stopRecording();
+                    switch (video.type) {
+                      case VideoType.network:
+                        await _controller.setMediaFromNetwork(
+                          video.url, // Cambia 'path' a 'url'
+                          hwAcc: HwAcc.full,
+                        );
+                        break;
+                      case VideoType.file:
+                        if (!mounted) break;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Copying file to temporary storage...'),
+                          ),
+                        );
+                        await Future<void>.delayed(const Duration(seconds: 1));
+                        final tempVideo = await _loadVideoToFs();
+                        await Future<void>.delayed(const Duration(seconds: 1));
+                        if (!mounted) break;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Now trying to play...'),
+                          ),
+                        );
+                        await Future<void>.delayed(const Duration(seconds: 1));
+                        if (await tempVideo.exists()) {
+                          await _controller.setMediaFromFile(tempVideo);
+                        } else {
+                          if (!mounted) break;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('File load error.'),
+                            ),
+                          );
+                        }
+                        break;
+                      case VideoType.asset:
+                        await _controller.setMediaFromAsset(video.url); // Cambia 'path' a 'url'
+                        break;
+                      case VideoType.recorded:
+                        final recordedFile = File(video.url); // Cambia 'path' a 'url'
+                        await _controller.setMediaFromFile(recordedFile);
+                        break;
+                    }
+                    setState(() {
+                      selectedVideoIndex = index;
+                    });
+                  },
+                );
               },
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
-    ],
-  );
-}
+    );
+  }
 
   @override
   Future<void> dispose() async {
