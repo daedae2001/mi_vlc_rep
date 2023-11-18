@@ -7,12 +7,12 @@ import 'services/m3u_service.dart';
 import 'video_data.dart';
 import 'vlc_player_with_controls.dart';
 
-class SingleTab extends StatefulWidget {
+class Vertical extends StatefulWidget {
   @override
-  _SingleTabState createState() => _SingleTabState();
+  _VerticalState createState() => _VerticalState();
 }
 
-class _SingleTabState extends State<SingleTab> {
+class _VerticalState extends State<Vertical> {
   static const _networkCachingMs = 6000;
   static const _subtitlesFontSize = 30;
   static const _height = 560.0;

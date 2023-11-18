@@ -1,11 +1,12 @@
+import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'controls_overlay.dart';
 import 'package:path_provider/path_provider.dart';
-
+import 'package:file_picker/file_picker.dart';
 typedef OnStopRecordingCallback = void Function(String);
 
 class VlcPlayerWithControls extends StatefulWidget {
@@ -494,7 +495,20 @@ bool isFullScreen = false;
       await _controller.stopRecording();
     }
   }
+Future<File>loadVideoToFs() async {
 
+  final filePickerResult = await FilePicker.platform.pickFiles(
+    type: FileType.video,
+  );
+
+  if (filePickerResult != null && filePickerResult.files.isNotEmpty) {
+    final platformFile = filePickerResult.files.first;
+    final file = File(platformFile.path??'');
+    return file;
+  } else {
+    throw Exception('No se seleccionó ningún archivo de video.');
+  }
+}
   void _onSliderPositionChanged(double progress) {
     setState(() {
       sliderValue = progress.floor().toDouble();

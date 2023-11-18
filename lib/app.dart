@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vls_my_1/services/m3u_service.dart';
-import 'single_tab.dart';
+import 'vertical_screen.dart';
 
 
 class App extends StatefulWidget {
@@ -40,7 +40,7 @@ class AppState extends State<App> {
       length: _tabCount,
       child: Scaffold(
         
-        body: SingleTab(),
+        body: Vertical(),
       ),
     );
   }
